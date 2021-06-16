@@ -1,5 +1,5 @@
 ﻿Param(
-    [Parameter(Mandatory=$true, HelpMessage="oneagentctl commands to run")][String] $oneagentParams
+    [Parameter(Mandatory=$true, ValueFromRemainingArguments=$true, Position=0, HelpMessage="oneagentctl command to run")][String[]] $oneagentParamList
 )
 
 <#
@@ -42,7 +42,8 @@ foreach ($line in Get-Content $hostFile) {
 }
 
 $oneagentctl = "$($env:Programfiles)\dynatrace\oneagent\agent\tools\oneagentctl"
-$oneagentCmd = "$oneagentctl $oneagentParams"
+$oneagentParams = $oneagentParamList -Join ' '
+$oneagentCmd = "& `"$oneagentctl`" $oneagentParams"
 
 $oneagentctlResults = @()
 
@@ -53,7 +54,7 @@ Write-Host -ForegroundColor Green "`nHOST LIST"
 Write-Host $hostSet
 
 $j = Invoke-Command -ComputerName $hostSet -ScriptBlock {
-    & "$using:oneagentctl" "$using:oneagentParams"
+    Invoke-Expression $using:oneagentCmd
 } -AsJob
 
 $j.ChildJobs | Wait-Job | Out-Null

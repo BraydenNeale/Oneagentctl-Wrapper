@@ -8,33 +8,35 @@ https://www.dynatrace.com/support/help/setup-and-configuration/dynatrace-oneagen
 
 Default path = %PROGRAMFILES%\dynatrace\oneagent\agent\tools\oneagentctl
 
+*** SETTERS *** 
+
 HOST GROUP
-./oneagentctl --set-host-group=MyHostGroup
+.\oneagentctl --set-host-group=MyHostGroup
+.\oneagentctl --get-host-group
 
 PROPERTIES
-./oneagentctl --set-host-property=AppName --set-host-property=Environment=Dev
+.\oneagentctl --set-host-property=AppName --set-host-property=Environment=Dev
+.\oneagentctl --get-host-properties 
 
 TAGS
-./oneagentctl --set-host-tag=TestHost --set-host-tag=role=fallback
+.\oneagentctl --set-host-tag=TestHost --set-host-tag=role=fallback
+.\oneagentctl --get-host-tags
 
 FULL STACK
-./oneagentctl --set-infra-only=false
-
-RESTART AGENT SERVICE
-./oneagentctl --restart-service
+.\oneagentctl --set-infra-only=false
+.\oneagentctl --get-infra-only
 
 NETWORK ZONE
-./oneagentctl --set-network-zone=<your.network.zone>
-
+.\oneagentctl --set-network-zone=<your.network.zone>
+.\oneagentctl --get-network-zone
 PROXY
-./oneagentctl --set-proxy=my-proxy.com
+.\oneagentctl --set-proxy=my-proxy.com
+.\oneagentctl --get-proxy
 
-GET EVERYTHING
-./oneagentctl --get-server --get-tenant -get-tenant-token --get-proxy --get-watchdog-portrange --get-auto-update-enabled --get-app-log-content-access
---get -system-logs-access-enabled --get-host-id --get-host-id-source --get-host-group --get-host-name --get-host-properties --get-host-tags --get-infra-only
---get-auto-injection-enabled --get-extensions-ingest-port --get-extensions-statsd-port --get-network-zone
-
+RESTART AGENT SERVICE
+.\oneagentctl --restart-service
 #>
+
 $hostSet = [System.Collections.Generic.HashSet[String]]@()
 $hostFile = '.\example_hosts.txt'
 foreach ($line in Get-Content $hostFile) {
@@ -60,11 +62,22 @@ $j = Invoke-Command -ComputerName $hostSet -ScriptBlock {
 $j.ChildJobs | Wait-Job | Out-Null
 
 foreach ($job in $j.ChildJobs) {
-    $location = $job.Location.toString()
-    $command = $job.Command.toString()
-    $output = Receive-Job -Job $job
-    $oneagentctlResults += @{Host="$location"; Output="$output"; Command="$command"}
+    $location = $job.Location
+    $command = $job.Command
+    $jobError = $job.Error
+    $output = $job.Output
+
+    try { 
+        $output = Receive-Job -Job $job -ErrorAction Stop
+    } catch { "err $_" }
+
+    if ($jobError) {
+        $jobError = $job.Error.Exception.Message
+    }
+
+    $oneagentctlResults += @{Host=$location; Output=$output; Error=$jobError; Command=$command}
+    Write-Host $thiserror
 }
 
 Write-Host -ForegroundColor Green "`nRESULT"
-$oneagentctlResults | ForEach-Object {[PSCustomObject]$_} | Format-Table Host, Output -AutoSize
+$oneagentctlResults | ForEach-Object {[PSCustomObject]$_} | Format-Table Host, Output, Error -AutoSize

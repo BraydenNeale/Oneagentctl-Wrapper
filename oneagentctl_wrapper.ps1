@@ -3,7 +3,7 @@
 )
 
 $hostSet = [System.Collections.Generic.HashSet[String]]@()
-$hostFile = '.\example_hosts.txt'
+$hostFile = '.\hosts.txt'
 foreach ($line in Get-Content $hostFile) {
     $hostSet.add($line) | Out-Null
 }

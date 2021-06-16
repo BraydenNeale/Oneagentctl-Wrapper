@@ -34,7 +34,9 @@ foreach ($job in $j.ChildJobs) {
 
     try { 
         $output = Receive-Job -Job $job -ErrorAction Stop
-    } catch { "err $_" }
+    } catch { 
+        # Supress Exception - We are logging it in results
+    }
 
     if ($jobError) {
         $jobError = $job.Error.Exception.Message

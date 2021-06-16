@@ -35,11 +35,10 @@ GET EVERYTHING
 --get-auto-injection-enabled --get-extensions-ingest-port --get-extensions-statsd-port --get-network-zone
 
 #>
-
 $hostSet = [System.Collections.Generic.HashSet[String]]@()
 $hostFile = '.\example_hosts.txt'
 foreach ($line in Get-Content $hostFile) {
-    $hostSet.add($line)
+    $hostSet.add($line) | Out-Null
 }
 
 $oneagentctl = "$($env:Programfiles)\dynatrace\oneagent\agent\tools\oneagentctl"
@@ -47,19 +46,24 @@ $oneagentCmd = "$oneagentctl $oneagentParams"
 
 $oneagentctlResults = @()
 
-write-host "$oneagentCmd"
-write-host "$hostSet"
+Write-Host -ForegroundColor Green "COMMAND:"
+Write-Host $oneagentCmd
+
+Write-Host -ForegroundColor Green "`nHOST LIST"
+Write-Host $hostSet
 
 $j = Invoke-Command -ComputerName $hostSet -ScriptBlock {
     & "$using:oneagentctl" "$using:oneagentParams"
 } -AsJob
 
-$j.ChildJobs | Wait-Job 
+$j.ChildJobs | Wait-Job | Out-Null
 
 foreach ($job in $j.ChildJobs) {
-    $oneagentctlResults += @{Host="$job.Location"; Output="$job.Output"; Command="$job.Command"}
-    Write-Host $job.Command
+    $location = $job.Location.toString()
+    $command = $job.Command.toString()
+    $output = Receive-Job -Job $job
+    $oneagentctlResults += @{Host="$location"; Output="$output"; Command="$command"}
 }
 
-$oneagentctlResults | ForEach-Object {[PSCustomObject]$_} | Format-Table Host, Command, Output -AutoSize
-# $oneagentctlResults | Format-Table
+Write-Host -ForegroundColor Green "`nRESULT"
+$oneagentctlResults | ForEach-Object {[PSCustomObject]$_} | Format-Table Host, Output -AutoSize

@@ -3,7 +3,7 @@
 )
 
 $hostSet = [System.Collections.Generic.HashSet[String]]@()
-$hostFile = '.\hosts.txt'
+$hostFile = '.\example_hosts.txt'
 foreach ($line in Get-Content $hostFile) {
     $hostSet.add($line) | Out-Null
 }
@@ -41,7 +41,6 @@ foreach ($job in $j.ChildJobs) {
     }
 
     $oneagentctlResults += @{Host=$location; Output=$output; Error=$jobError; Command=$command}
-    Write-Host $thiserror
 }
 
 Write-Host -ForegroundColor Green "`nRESULT"

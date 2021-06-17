@@ -25,7 +25,7 @@ Write-Host $hostSet
 
 # Set will fail with 'One or more computer name are not valid. - All or Nothing
 # Array will try seperately for each host: failing hosts will be displayed with Output = {} and Error = {}
-$hostArray = New-Object string[] $hostSet.Count;
+$hostArray = New-Object string[] $hostSet.Count
 $hostSet.CopyTo($hostArray)
 
 # Remotely run oneagentctl on each host in our list
@@ -33,6 +33,7 @@ $j = Invoke-Command -ComputerName $hostArray -ScriptBlock {
     Invoke-Expression $using:oneagentCmd
 } -AsJob
 
+# Wait for all remote jobs to finish and then receive the results
 $j.ChildJobs | Wait-Job | Out-Null
 
 foreach ($job in $j.ChildJobs) {

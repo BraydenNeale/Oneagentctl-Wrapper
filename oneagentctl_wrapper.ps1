@@ -55,7 +55,7 @@ foreach ($job in $j.ChildJobs) {
 
     if (-Not $jobError -And -Not $output -And $state -eq 'Failed') {
         # Host connection failed so update the error
-        $jobError = "Invoke-Command: Could not connect to Host $location"
+        $jobError = "Invoke-Command: Could not connect to Host"
     }
 
     $oneagentctlResults += @{Host=$location; Output=$output; Error=$jobError; Command=$command; State=$state}

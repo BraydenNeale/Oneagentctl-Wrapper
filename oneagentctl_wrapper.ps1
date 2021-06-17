@@ -2,6 +2,7 @@
     [Parameter(Mandatory=$true, ValueFromRemainingArguments=$true, Position=0, HelpMessage="oneagentctl command to run")][String[]] $oneagentParamList
 )
 
+# HashSet to remove duplicates from the Host list
 $hostSet = [System.Collections.Generic.HashSet[String]]@()
 $hostFile = '.\example_hosts.txt'
 foreach ($line in Get-Content $hostFile) {
@@ -10,6 +11,8 @@ foreach ($line in Get-Content $hostFile) {
 
 $oneagentctl = "$($env:Programfiles)\dynatrace\oneagent\agent\tools\oneagentctl"
 $oneagentParams = $oneagentParamList -Join ' '
+# & + Invoke-Expression required to handle multiple paramas + spaces in the path
+# & "C:\Program Files\dynatrace\oneagent\agent\tools\oneagentctl" --get-host-tags
 $oneagentCmd = "& `"$oneagentctl`" $oneagentParams"
 
 $oneagentctlResults = @()
@@ -20,7 +23,13 @@ Write-Host $oneagentCmd
 Write-Host -ForegroundColor Green "`nHOST LIST"
 Write-Host $hostSet
 
-$j = Invoke-Command -ComputerName $hostSet -ScriptBlock {
+# Set will fail with 'One or more computer name are not valid. - All or Nothing
+# Array will try seperately for each host: failing hosts will be displayed with Output = {} and Error = {}
+$hostArray = New-Object string[] $hostSet.Count;
+$hostSet.CopyTo($hostArray)
+
+# Remotely run oneagentctl on each host in our list
+$j = Invoke-Command -ComputerName $hostArray -ScriptBlock {
     Invoke-Expression $using:oneagentCmd
 } -AsJob
 
@@ -40,6 +49,11 @@ foreach ($job in $j.ChildJobs) {
 
     if ($jobError) {
         $jobError = $job.Error.Exception.Message
+    }
+
+    if (-Not $jobError -And -Not $output) {
+        # Host connection failed so update the error
+        $jobError = "Invoke-Command: Could not connect to Host $location"
     }
 
     $oneagentctlResults += @{Host=$location; Output=$output; Error=$jobError; Command=$command}

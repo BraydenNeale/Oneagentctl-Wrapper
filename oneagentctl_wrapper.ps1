@@ -41,6 +41,7 @@ foreach ($job in $j.ChildJobs) {
     $command = $job.Command
     $jobError = $job.Error
     $output = $job.Output
+    $state = $job.State
 
     try { 
         $output = Receive-Job -Job $job -ErrorAction Stop
@@ -52,13 +53,13 @@ foreach ($job in $j.ChildJobs) {
         $jobError = $job.Error.Exception.Message
     }
 
-    if (-Not $jobError -And -Not $output) {
+    if (-Not $jobError -And -Not $output -And $state -eq 'Failed') {
         # Host connection failed so update the error
         $jobError = "Invoke-Command: Could not connect to Host $location"
     }
 
-    $oneagentctlResults += @{Host=$location; Output=$output; Error=$jobError; Command=$command}
+    $oneagentctlResults += @{Host=$location; Output=$output; Error=$jobError; Command=$command; State=$state}
 }
 
 Write-Host -ForegroundColor Green "`nRESULT"
-$oneagentctlResults | ForEach-Object {[PSCustomObject]$_} | Format-Table Host, Output, Error -AutoSize
+$oneagentctlResults | ForEach-Object {[PSCustomObject]$_} | Format-Table Host, State, Output, Error -AutoSize
